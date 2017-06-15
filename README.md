@@ -1,5 +1,5 @@
 Videolyrics
-###########
+===========
 
 The scripts in this repository can be used to create a lyrics video.
 
