@@ -10,11 +10,11 @@ outfile out, ext, prev=0 {
 	return `$out.$ext`
 }
 
-main midi, fps, out {
+main midi, first, fps, out {
 	fps = parseInteger(fps)
 	push "0 s"
 	prev_svgs := new map
-	prev_lines := [""]
+	prev_lines := [first]
 	{} | bufferedExec "perl", "lyrics.pl", midi | for line do
 		space := indexOf(" ", line)
 		time := line[:space]
