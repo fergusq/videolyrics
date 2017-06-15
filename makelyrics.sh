@@ -3,7 +3,8 @@
 MIDI=$1
 MUSIC=$2
 OUTPUT=$3
+TEMP=`mktemp -d`
 
-rm /tmp/video/*
-röda videolyrics.röd "$MIDI" 24 /tmp/video/frame# 2>/dev/null
-ffmpeg -framerate 24 -start_number 1 -i /tmp/video/frame%d.png -i "$MUSIC" "$OUTPUT"
+röda videolyrics.röd "$MIDI" 24 "$TEMP/frame#" 2>/dev/null
+ffmpeg -framerate 24 -start_number 1 -i "$TEMP/frame%d.png" -i "$MUSIC" "$OUTPUT"
+rm -r "$TEMP"
