@@ -1,0 +1,92 @@
+{
+	fileutil := require("fileutil")
+	cp := fileutil.cp
+	rm := fileutil.rm
+	frame := 0
+}
+
+outfile out, ext, prev=0 {
+	out ~= "#", ""..frame-prev
+	return `$out.$ext`
+}
+
+main midi, fps, out {
+	fps = parseInteger(fps)
+	push "0 s"
+	prev_svgs := new map
+	prev_lines := [""]
+	{} | bufferedExec "perl", "lyrics.pl", midi | for line do
+		space := indexOf(" ", line)
+		time := line[:space]
+		text := line[space+1:]
+		until [ text[-1:] = "\\" ] do
+			pull line
+			space := indexOf(" ", line)
+			text .= " "..line[space+1:]
+		done
+		text ~= "- ", "", `\\`, ""
+		i := 0
+		lines := [""]
+		split text | for word do
+			lines[-1] .= " "..word
+			i += #word
+			if [ i > 20 ] do
+				lines += ""
+				i = 0
+			done
+		done
+		print "\r", text
+		time = parseFloating(time)
+		while [ frame/fps < time ] do
+			frame ++
+			
+			svg := `<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="100%" height="100%" viewBox="0 0 800 600">
+	<style>
+		/* <![CDATA[ */
+		tspan {
+			fill: white;
+			text-align: center;
+			font-family: monospace;
+			font-size: 40px;
+		}
+		tspan.smalltext {
+			font-size: 20px;
+		}
+		rect {
+			fill: black;
+		}
+		/* ]]> */
+	</style>
+	<rect width="100%" height="100%" />
+	<text y="50%">
+		<tspan x="50%" text-anchor="middle">${prev_lines[0]}</tspan>`
+			for line in prev_lines[1:] do
+				svg .= `
+		<tspan x="50%" text-anchor="middle" dy="40">$line</tspan>`
+			done
+			svg .=`
+		<tspan x="50%" text-anchor="middle" dy="40" class="smalltext">${lines[0]}</tspan>`
+			for line in lines[1:] do
+				svg .=`
+		<tspan x="50%" text-anchor="middle" dy="20" class="smalltext">$line</tspan>`
+			done
+			svg .= `
+	</text>
+</svg>
+`			
+			unless [ prev_svgs[svg]? ] do
+				push svg | writeStrings outfile(out, "svg")
+				{} | exec("convert", outfile(out, "svg"), outfile(out, "png")) | {}
+				rm outfile(out, "svg")
+			else
+				cp prev_svgs[svg], outfile(out, "png")
+			done
+			prev_svgs[svg] = outfile(out, "png")
+			push "\r", round(100*frame/fps)/100, " s"
+		done
+		prev_lines = lines
+	done
+	print ""
+}
