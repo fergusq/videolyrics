@@ -24,7 +24,7 @@ main midi, first, fps, out {
 			space := indexOf(" ", line)
 			text .= " "..line[space+1:]
 		done
-		text ~= "- ", "", `\\`, ""
+		text ~= "- ", "", " -", "", `\\`, "", "&", "ä", "%", "ö"
 		i := 0
 		lines := [""]
 		split text | for word do
@@ -42,17 +42,17 @@ main midi, first, fps, out {
 			
 			svg := `<?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg"
-     width="100%" height="100%" viewBox="0 0 800 600">
+     width="100%" height="100%" viewBox="0 0 1600 900">
 	<style>
 		/* <![CDATA[ */
 		tspan {
 			fill: white;
 			text-align: center;
 			font-family: monospace;
-			font-size: 40px;
+			font-size: 80px;
 		}
 		tspan.smalltext {
-			font-size: 20px;
+			font-size: 40px;
 		}
 		rect {
 			fill: black;
@@ -60,17 +60,17 @@ main midi, first, fps, out {
 		/* ]]> */
 	</style>
 	<rect width="100%" height="100%" />
-	<text y="50%">
+	<text y="50%" baseline-anchor="middle">
 		<tspan x="50%" text-anchor="middle">${prev_lines[0]}</tspan>`
 			for line in prev_lines[1:] do
 				svg .= `
-		<tspan x="50%" text-anchor="middle" dy="40">$line</tspan>`
+		<tspan x="50%" text-anchor="middle" dy="80">$line</tspan>`
 			done
 			svg .=`
-		<tspan x="50%" text-anchor="middle" dy="40" class="smalltext">${lines[0]}</tspan>`
+		<tspan x="50%" text-anchor="middle" dy="80" class="smalltext">${lines[0]}</tspan>`
 			for line in lines[1:] do
 				svg .=`
-		<tspan x="50%" text-anchor="middle" dy="20" class="smalltext">$line</tspan>`
+		<tspan x="50%" text-anchor="middle" dy="40" class="smalltext">$line</tspan>`
 			done
 			svg .= `
 	</text>
