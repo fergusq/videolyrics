@@ -3,6 +3,8 @@
 	cp := fileutil.cp
 	rm := fileutil.rm
 	frame := 0
+	
+	SHOW_NEXT_LINE := FALSE
 }
 
 outfile out, ext, prev=0 {
@@ -66,11 +68,13 @@ main midi, first, fps, out {
 				svg .= `
 		<tspan x="50%" text-anchor="middle" dy="80">$line</tspan>`
 			done
-			svg .=`
-		<tspan x="50%" text-anchor="middle" dy="80" class="smalltext">${lines[0]}</tspan>`
-			for line in lines[1:] do
+			if [ SHOW_NEXT_LINE ] do
 				svg .=`
-		<tspan x="50%" text-anchor="middle" dy="40" class="smalltext">$line</tspan>`
+			<tspan x="50%" text-anchor="middle" dy="80" class="smalltext">${lines[0]}</tspan>`
+				for line in lines[1:] do
+					svg .=`
+			<tspan x="50%" text-anchor="middle" dy="40" class="smalltext">$line</tspan>`
+				done
 			done
 			svg .= `
 	</text>
