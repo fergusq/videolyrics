@@ -2,31 +2,42 @@
 	fileutil := require("fileutil")
 	cp := fileutil.cp
 	rm := fileutil.rm
-	frame := 0
+	logExec := fileutil.logExec
 	
 	SHOW_NEXT_LINE := FALSE
 }
 
-outfile out, ext, prev=0 {
-	out ~= "#", ""..frame-prev
+outfile out, ext, num {
+	out ~= "#", ""..num
 	return `$out.$ext`
 }
 
-main midi, first, fps, out {
-	fps = parseInteger(fps)
+main midi, first, max_time, out {
+
+	max_time = parseFloating(max_time)
+
+	print `<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1600 900">
+	<style>rect{fill: black;}</style><rect width="100%" height="100%" />
+</svg>` | writeStrings outfile(out, "svg", "black")
+	logExec "convert", outfile(out, "svg", "black"), outfile(out, "png", "black")
+	rm outfile(out, "svg", "black")
+	
 	push "0 s"
-	prev_svgs := new map
 	prev_lines := [first]
+	prev_time = 0
+	frame := 0
 	{} | bufferedExec "perl", "lyrics.pl", midi | for line do
 		space := indexOf(" ", line)
 		time := line[:space]
+		end_time := time
 		text := line[space+1:]
-		until [ text[-1:] = "\\" ] do
+		until [ text[-1:] =~ `\\|/` ] do
 			pull line
 			space := indexOf(" ", line)
-			text .= " "..line[space+1:]
+			text .= " "..line[space+1:] if [ line[space+1:] !~ `\s*` ]
+			end_time = line[:space]
 		done
-		text ~= "- ", "", " -", "", `\\`, "", "&", "ä", "%", "ö"
+		text ~= "- ", "", " -", "", `\\|/`, "", "&", "ä", "%", "ö"
 		i := 0
 		lines := [""]
 		split text | for word do
@@ -37,12 +48,10 @@ main midi, first, fps, out {
 				i = 0
 			done
 		done
-		print "\r", text
+		STDOUT.push "\r", text, "\n"
 		time = parseFloating(time)
-		while [ frame/fps < time ] do
-			frame ++
-			
-			svg := `<?xml version="1.0"?>
+		end_time = parseFloating(end_time)
+		svg := `<?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      width="100%" height="100%" viewBox="0 0 1600 900">
 	<style>
@@ -64,33 +73,37 @@ main midi, first, fps, out {
 	<rect width="100%" height="100%" />
 	<text y="50%" baseline-anchor="middle">
 		<tspan x="50%" text-anchor="middle">${prev_lines[0]}</tspan>`
-			for line in prev_lines[1:] do
-				svg .= `
-		<tspan x="50%" text-anchor="middle" dy="80">$line</tspan>`
-			done
-			if [ SHOW_NEXT_LINE ] do
-				svg .=`
-			<tspan x="50%" text-anchor="middle" dy="80" class="smalltext">${lines[0]}</tspan>`
-				for line in lines[1:] do
-					svg .=`
-			<tspan x="50%" text-anchor="middle" dy="40" class="smalltext">$line</tspan>`
-				done
-			done
+		for line in prev_lines[1:] do
 			svg .= `
+		<tspan x="50%" text-anchor="middle" dy="80">$line</tspan>`
+		done
+		if [ SHOW_NEXT_LINE ] do
+			svg .=`
+			<tspan x="50%" text-anchor="middle" dy="80" class="smalltext">${lines[0]}</tspan>`
+			for line in lines[1:] do
+				svg .=`
+			<tspan x="50%" text-anchor="middle" dy="40" class="smalltext">$line</tspan>`
+			done
+		done
+		svg .= `
 	</text>
 </svg>
-`			
-			unless [ prev_svgs[svg]? ] do
-				push svg | writeStrings outfile(out, "svg")
-				{} | exec("convert", outfile(out, "svg"), outfile(out, "png")) | {}
-				rm outfile(out, "svg")
-			else
-				cp prev_svgs[svg], outfile(out, "png")
-			done
-			prev_svgs[svg] = outfile(out, "png")
-			push "\r", round(100*frame/fps)/100, " s"
+`
+		frame ++
+		push svg | writeStrings outfile(out, "svg", frame)
+		logExec "convert", outfile(out, "svg", frame), outfile(out, "png", frame)
+		rm outfile(out, "svg", frame)
+		
+		print "file ", outfile(out, "png", frame)
+		print "duration ", min([time-prev_time, max_time])
+		if [ time-prev_time > max_time ] do
+			print "file ", outfile(out, "png", "black")
+			print "duration ", time-prev_time-max_time
 		done
+		
+		STDOUT.push "\r", round(100*time)/100, " s"
 		prev_lines = lines
-	done
-	print ""
+		prev_time = time
+	done | writeStrings outfile(out, "txt", "")
+	print "\n"
 }
